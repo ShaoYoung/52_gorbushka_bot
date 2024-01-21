@@ -5,9 +5,9 @@ from aiogram.types import InlineKeyboardMarkup
 from aiogram.filters.callback_data import CallbackData
 
 
-class CurrencyCallbackFactory(CallbackData, prefix="currency"):
-    action: str
-    currency: str
+class UserChoiceCallbackFactory(CallbackData, prefix="selection"):
+    action: str = None
+    choice: str
 
 
 def get_reply_keyboard(buttons_text: list, adjust: list, resize_keyboard: bool = True, one_time_keyboard: bool = False) -> ReplyKeyboardMarkup:
@@ -33,10 +33,10 @@ def get_inline_keyboard(buttons: dict, adjust: list) -> InlineKeyboardMarkup:
     :param adjust: количество кнопок по рядам
     :return: InlineKeyboardMarkup
     """
+    # print(buttons)
     builder = InlineKeyboardBuilder()
-    # builder.button(text='Сайт ЦБ РФ', url='https://www.cbr.ru/')
     for key, value in buttons.items():
-        builder.button(text=key, callback_data=CurrencyCallbackFactory(action=value['action'], currency=value['currency']))
+        builder.button(text=key, callback_data=UserChoiceCallbackFactory(action=value['action'], choice=value['choice']))
     builder.adjust(*adjust)
     return builder.as_markup()
 

@@ -5,5 +5,6 @@ class UserState(StatesGroup):
     """
     Статус пользователя
     """
-    choosing_first_currency = State()
-    choosing_second_currency = State()
+    choosing_category = State()
+    choosing_vendor = State()
+    studying_products = State()
