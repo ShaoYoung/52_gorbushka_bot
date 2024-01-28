@@ -1,8 +1,10 @@
 import asyncio
 import logging
+import inspect
+import os
 
 # В документации по aiogram используется config_reader, а не dotenv
-from config_reader import config
+from config import config
 
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram import Bot, Dispatcher
@@ -11,6 +13,8 @@ from aiogram.enums import ParseMode
 from handlers import common
 from handlers import maintenance
 from handlers import user_selections
+
+from core import core_log as log
 
 # bot
 # bot = Bot(token=config.bot_token.get_secret_value(), parse_mode=ParseMode.HTML)
@@ -23,9 +27,16 @@ async def main(maintenance_mode: bool = False):
     :return: None
     """
     # включаем логирование
-    # TODO Логирование переделать
-    logging.basicConfig(level=logging.INFO, filename="log.log", filemode="a",
-                        format="%(asctime)s - %(levelname)s - %(funcName)s - %(message)s")
+    # logging.basicConfig(level=logging.INFO, filename="log.log", filemode="a",
+    #                     format="%(asctime)s - %(levelname)s - %(funcName)s - %(message)s")
+    await log.init()
+    # имя модуля
+    facility_name = os.path.basename(__file__)
+    # имя функции
+    module_name = inspect.currentframe().f_code.co_name
+    await log.log(text=f'[no chat_id] {module_name} bot started', severity='info', facility=facility_name)
+    # формат записи лога
+    # await log.log(text=f'[{str(chat_id)}] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error', facility=os.path.basename(__file__))
 
     # bot
     # для импорта bot в обработчиках его можно сделать глобальным
