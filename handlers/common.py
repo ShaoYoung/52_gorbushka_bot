@@ -13,8 +13,8 @@ from aiogram.types import FSInputFile, URLInputFile
 # from core import core_pg_ssh as pg
 # from core import core_pg as pg
 # from core import core_asyncpg as pg
-# from core.db import db
-from core.db_ssh import db
+from core.db import db
+# from core.db_ssh import db
 from config import macro
 from core import core_log as log
 
@@ -46,8 +46,8 @@ async def set_registered_users_id() -> None:
     Заполнение списка registered_users_id (пока из файла, потом надо будет переделать на БД)
     :return: None
     """
-    global registered_users_id
     try:
+        global registered_users_id
         if os.path.exists(bot_users_file):
             with open(bot_users_file, 'r') as json_file:
                 registered_users = json.load(json_file)
@@ -65,11 +65,11 @@ async def add_new_user(user: dict) -> bool:
     :param user: пользователь (словарь{id, full_name})
     :return: bool
     """
-    global registered_users_id
-    # добавляем id пользователя в список
-    registered_users_id.append(user.get('id'))
-    # пока дописываем пользователя в файл, позже переделать на БД
     try:
+        global registered_users_id
+        # добавляем id пользователя в список
+        registered_users_id.append(user.get('id'))
+        # пока дописываем пользователя в файл, позже переделать на БД
         if os.path.exists(bot_users_file):
             with open(bot_users_file, 'r') as json_file:
                 registered_users = json.load(json_file)
@@ -91,9 +91,9 @@ async def get_course_cbrf(currency: str = 'USD') -> float:
     :param currency: валюта
     :return: курс валюты к рублю
     """
-    valute = f"./Valute[CharCode='{currency}']/Value"
-    url = 'https://www.cbr.ru/scripts/XML_daily.asp'
     try:
+        valute = f"./Valute[CharCode='{currency}']/Value"
+        url = 'https://www.cbr.ru/scripts/XML_daily.asp'
         rate = float(ET.fromstring(requests.get(url=url).text).find(valute).text.replace(',', '.'))
         return rate
     except Exception as err:
@@ -154,12 +154,17 @@ async def main_menu(message: Message, state: FSMContext):
     :param state: текущий статус
     :return: None
     """
-    # keyboard = await get_reply_keyboard(['Выбор категории', 'Отписаться', 'USD/RUB', 'График USD/RUB'], [2])
-    # 27.01.2024 пока заменил на 2 кнопки
-    keyboard = await get_reply_keyboard(['Выбор категории', 'USD/RUB'], [2])
-    await message.answer(text='Я могу вам предложить', reply_markup=keyboard)
-
     try:
+        # очистка State
+        await state.clear()
+
+        # keyboard = await get_reply_keyboard(['Выбор категории', 'Отписаться', 'USD/RUB', 'График USD/RUB'], [2])
+        # 27.01.2024 пока заменил на 2 кнопки
+        keyboard = await get_reply_keyboard(['Выбор категории', 'USD/RUB'], [2])
+        # Удаление клавы
+        # keyboard = ReplyKeyboardRemove()
+        await message.answer(text='Я могу вам предложить', reply_markup=keyboard)
+
         # Получаем категории из БД
         query = "select category, count(*) from warehouse "
         where = "where warehouse_id=40 and balance>0 "
@@ -191,66 +196,74 @@ async def cmd_start(message: Message, state: FSMContext):
     :param state: текущий статус
     :return: None
     """
-    global registered_users_id
-    # при первой команде /start заполняем список telegram-id пользователей
-    # если заполняем список telegram-id пользователей не заполнен, то заполняем его
-    if not registered_users_id:
-        await set_registered_users_id()
+    try:
+        global registered_users_id
+        # при первой команде /start заполняем список telegram-id пользователей
+        # если заполняем список telegram-id пользователей не заполнен, то заполняем его
+        if not registered_users_id:
+            await set_registered_users_id()
 
-    # если id пользователя не в списке, то регистрируем его
-    if message.chat.id not in registered_users_id:
-        if await add_new_user({'id': message.chat.id, 'full_name': message.from_user.full_name}):
-            await message.answer(text='Вы у меня первый раз.\nЯ вас зарегистрировал, можете работать.')
-        else:
-            await message.answer(text='Вы у меня первый раз.\nЗарегистрировать вас у меня не получилось.')
-    # переход в основное меню
-    await main_menu(message, state)
+        # если id пользователя не в списке, то регистрируем его
+        if message.chat.id not in registered_users_id:
+            if await add_new_user({'id': message.chat.id, 'full_name': message.from_user.full_name}):
+                await message.answer(text='Вы у меня первый раз.\nЯ вас зарегистрировал, можете работать.')
+            else:
+                await message.answer(text='Вы у меня первый раз.\nЗарегистрировать вас у меня не получилось.')
+        # переход в основное меню
+        await main_menu(message, state)
+    except Exception as err:
+        await log.log(text=f'[{str(message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error', facility=os.path.basename(__file__))
+        await message.answer(text='Что-то пошло не так...\nПопробуйте ещё раз.')
 
 
 @router.message(Command(commands=['alllist']))
-async def cmd_alllist(message: Message):
+async def cmd_alllist(message: Message, state: FSMContext):
     """
     Команда /alllist. Вывод всех продуктов в одном сообщении
     :param message: message
+    :param state: текущий статус
     :return:
     """
-    order = list()
-    order.append("SAMSUNG")
-    order.append("APPLE")
-    order.append("APPLE IPHONE")
-    order.append("FLY")
-    order.append("INFINIX")
-    order.append("TECNO")
-    order.append("HONOR, HUAWEI")
-    order.append("OnePlus")
-    order.append("GOOGLE PIXEL")
-    order.append("REALME")
-    order.append("DYSON")
-    order.append("GO PRO")
-    order.append("SONY PS")
-    order.append("XIAOMI")
-    order.append("XIAOMI POCO")
-    order.append("XIAOMI MI-серия")
-    order.append("XIAOMI REDMI")
-    order.append("HOTWAV")
-    order.append("DOOGEE")
-    order.append("ULEFONE")
-    order.append("OUKITEL")
-    order.append("BLACKVIEW")
-    order.append("ATOUCH")
-    order.append("UMIIO")
-    order.append("X-PRIME")
-    order.append("NOKIA")
-    order.append("JBL")
-    order.append("PITAKA")
-    order.append("УМНАЯ КОЛОНКА")
-
-    #
-    # 1 Сначала берём список Категорий
-    # 2 Для каждой категории список Вендоров
-    # 3 Для каждого вендора список товаров
-    #
     try:
+        # очистка State
+        await state.clear()
+
+        order = list()
+        order.append("SAMSUNG")
+        order.append("APPLE")
+        order.append("APPLE IPHONE")
+        order.append("FLY")
+        order.append("INFINIX")
+        order.append("TECNO")
+        order.append("HONOR, HUAWEI")
+        order.append("OnePlus")
+        order.append("GOOGLE PIXEL")
+        order.append("REALME")
+        order.append("DYSON")
+        order.append("GO PRO")
+        order.append("SONY PS")
+        order.append("XIAOMI")
+        order.append("XIAOMI POCO")
+        order.append("XIAOMI MI-серия")
+        order.append("XIAOMI REDMI")
+        order.append("HOTWAV")
+        order.append("DOOGEE")
+        order.append("ULEFONE")
+        order.append("OUKITEL")
+        order.append("BLACKVIEW")
+        order.append("ATOUCH")
+        order.append("UMIIO")
+        order.append("X-PRIME")
+        order.append("NOKIA")
+        order.append("JBL")
+        order.append("PITAKA")
+        order.append("УМНАЯ КОЛОНКА")
+
+        #
+        # 1 Сначала берём список Категорий
+        # 2 Для каждой категории список Вендоров
+        # 3 Для каждого вендора список Товаров
+        #
         text = ""
         #
         # query Vendor
@@ -319,19 +332,27 @@ async def cmd_alllist(message: Message):
 
 
 @router.message(Command(commands=['about']))
-async def cmd_about(message: Message):
+async def cmd_about(message: Message, state: FSMContext):
     """
     Команда /about
     :param message: сообщение
+    :param state: текущий статус
     :return: None
     """
-    about_content = """Уважаемые коллеги, друзья!
+    try:
+        # очистка State
+        await state.clear()
 
-    Мы рады приветствовать вас в нашем боте.
-
-    Здесь вы можете ознакомиться с ассортиментом товаров и ценами.
-    По любым интересующим вопросам обращайтесь по телефону 8 963 962 7770"""
-    await message.answer(text=about_content)
+        about_content = """Уважаемые коллеги, друзья!
+    
+        Мы рады приветствовать вас в нашем боте.
+    
+        Здесь вы можете ознакомиться с ассортиментом товаров и ценами.
+        По любым интересующим вопросам обращайтесь по телефону 8 963 962 7770"""
+        await message.answer(text=about_content)
+    except Exception as err:
+        await log.log(text=f'[{str(message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error', facility=os.path.basename(__file__))
+        await message.answer(text='Что-то пошло не так...\nПопробуйте ещё раз.')
 
 
 @router.message(F.text == 'Выбор категории')
@@ -342,25 +363,32 @@ async def return_in_main_menu(message: Message, state: FSMContext):
     :param state: текущий статус
     :return: None
     """
-    # очистка State
-    await state.clear()
-    await main_menu(message, state)
+    try:
+        # очистка State
+        await state.clear()
+        await main_menu(message, state)
+    except Exception as err:
+        await log.log(text=f'[{str(message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error', facility=os.path.basename(__file__))
+        await message.answer(text='Что-то пошло не так...\nПопробуйте ещё раз.')
 
 
 @router.message(F.text == 'Отписаться')
-async def unsubscribe(message: Message):
+async def unsubscribe(message: Message, state: FSMContext):
     """
     Отписаться
     :param message: сообщение
     :param state: текущий статус
     :return: None
     """
-    global registered_users_id
-    # если список telegram-id пользователей не заполнен, то заполняем его
-    if not registered_users_id:
-        await set_registered_users_id()
-
     try:
+        # очистка State
+        await state.clear()
+
+        global registered_users_id
+        # если список telegram-id пользователей не заполнен, то заполняем его
+        if not registered_users_id:
+            await set_registered_users_id()
+
         if message.chat.id in registered_users_id:
             registered_users_id.remove(message.chat.id)
 
@@ -373,15 +401,18 @@ async def unsubscribe(message: Message):
 
 
 @router.message(F.text == 'USD/RUB')
-async def get_course_usd_rub(message: Message):
+async def get_course_usd_rub(message: Message, state: FSMContext):
     """
     Отписаться
     :param message: сообщение
     :param state: текущий статус
     :return: None
     """
-    global exchange_rates
     try:
+        # очистка State
+        await state.clear()
+
+        global exchange_rates
         if exchange_rates['last_updated_datetime'].date() < datetime.utcnow().date():
             # print('Имеющиеся курсы устарели')
             await set_exchange_rates()
@@ -392,74 +423,108 @@ async def get_course_usd_rub(message: Message):
 
 
 @router.message(F.text == 'График USD/RUB')
-async def get_chart_usd_rub(message: Message):
-    # TODO Сделать график USR/RUB
+async def get_chart_usd_rub(message: Message, state: FSMContext):
+    try:
+        # TODO Сделать график USR/RUB
+        # очистка State
+        await state.clear()
 
-    await message.answer(text='График в работе')
+        await message.answer(text='График в работе')
+    except Exception as err:
+        await log.log(text=f'[{str(message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error', facility=os.path.basename(__file__))
+        await message.answer(text='Что-то пошло не так...\nПопробуйте ещё раз.')
 
 
 @router.message(Command(commands='get_log'))
-async def cmd_log(message: Message):
+async def cmd_log(message: Message, state: FSMContext):
     """
     Отправка файла с логами в чат пользователю
     :param message:
+    :param state: текущий статус
     :return:
     """
-    await message.answer(text='Файл с логами:')
-    file_from_pc = FSInputFile('server.log')
-    await message.answer_document(file_from_pc)
+    try:
+        # очистка State
+        await state.clear()
+
+        await message.answer(text='Файл с логами:')
+        file_from_pc = FSInputFile('server.log')
+        await message.answer_document(file_from_pc)
+    except Exception as err:
+        await log.log(text=f'[{str(message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error', facility=os.path.basename(__file__))
+        await message.answer(text='Что-то пошло не так...\nПопробуйте ещё раз.')
 
 
 @router.message(Command(commands='get_bot_users'))
-async def cmd_get_bot_users(message: Message):
+async def cmd_get_bot_users(message: Message, state: FSMContext):
     """
     Получить пользователей бота
     :param message:
+    :param state: текущий статус
     :return:
     """
-    if os.path.exists(bot_users_file):
-        with open(bot_users_file, 'r') as json_file:
-            registered_users = json.load(json_file)
-        text_answer = ''
-        for count, user in enumerate(registered_users, start=1):
-            text_answer += f'{count}. {user.get("full_name")}\n'
-        await message.answer(text=f'Пользователи бота:\n{text_answer}')
-    else:
-        await message.answer(text='У бота пока нет пользователей.')
+    try:
+        # очистка State
+        await state.clear()
+
+        if os.path.exists(bot_users_file):
+            with open(bot_users_file, 'r') as json_file:
+                registered_users = json.load(json_file)
+            text_answer = ''
+            for count, user in enumerate(registered_users, start=1):
+                text_answer += f'{count}. {user.get("full_name")}\n'
+            await message.answer(text=f'Пользователи бота:\n{text_answer}')
+        else:
+            await message.answer(text='У бота пока нет пользователей.')
+    except Exception as err:
+        await log.log(text=f'[{str(message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error', facility=os.path.basename(__file__))
+        await message.answer(text='Что-то пошло не так...\nПопробуйте ещё раз.')
 
 
 @router.message(Command(commands=['macro']))
-async def cmd_macro(message: Message):
+async def cmd_macro(message: Message, state: FSMContext):
     """
     Команда /macro. Расшифровка символов.
     :param message: сообщение
+    :param state: текущий статус
     :return: None
     """
-    text = "<code>"
-    for c in macro.keys():
-        text += f''
-        text += "{0:16} {1}\n".format(c, str(macro[c]))
-    text += "</code>"
-    # answer = dict()
-    # answer.update( {"text":text} )
-    await message.answer(text=text)
+    try:
+        # очистка State
+        await state.clear()
+
+        text = "<code>"
+        for c in macro.keys():
+            text += f''
+            text += "{0:16} {1}\n".format(c, str(macro[c]))
+        text += "</code>"
+        # answer = dict()
+        # answer.update( {"text":text} )
+        await message.answer(text=text)
+    except Exception as err:
+        await log.log(text=f'[{str(message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error', facility=os.path.basename(__file__))
+        await message.answer(text='Что-то пошло не так...\nПопробуйте ещё раз.')
 
 
 @router.message(F.text.startswith(''))
-async def cmd_incorrectly(message: Message):
+async def cmd_incorrectly(message: Message, state: FSMContext):
     """
     Обработчик неизвестного текста (инициирует поиск в БД)
     :param message: текстовое сообщение
+    :param state: текущий статус
     :return: None
     """
-    query_text = message.text
-    query = "select description, price from warehouse "
-    where = f"where warehouse_id=40 and (category ilike '%{query_text}%' or vendor ilike '%{query_text}%' or description ilike '%{query_text}%') and balance>0 "
-    order = "order by description"
-    query += where + order
-    # print(query)
-
     try:
+        # очистка State
+        await state.clear()
+
+        query_text = message.text
+        query = "select description, price from warehouse "
+        where = f"where warehouse_id=40 and (category ilike '%{query_text}%' or vendor ilike '%{query_text}%' or description ilike '%{query_text}%') and balance>0 "
+        order = "order by description"
+        query += where + order
+        # print(query)
+
         rows = await db.fetch(query=query)
 
         if rows:
@@ -481,14 +546,3 @@ async def cmd_incorrectly(message: Message):
         await message.answer(text='Что-то пошло не так...\nПопробуйте ещё раз.')
 
 
-@router.message(F.animation)
-@router.message(F.photo)
-@router.message(F.sticker)
-@router.message(F.contact)
-async def unknown_message(message: Message):
-    """
-    Обработчик неизвестных сообщений
-    :param message: сообщение типа (из списка выше)
-    :return: None
-    """
-    await message.reply(f'Я не знаю <b> что с этим делать </b>')

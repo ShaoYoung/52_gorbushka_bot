@@ -15,8 +15,8 @@ from handlers.common import split_text
 # from core import core_pg_ssh as pg
 # from core import core_pg as pg
 # from core import core_asyncpg as pg
-# from core.db import db
-from core.db_ssh import db
+from core.db import db
+# from core.db_ssh import db
 from core import core_log as log
 
 import inspect
@@ -34,7 +34,11 @@ async def callbacks_without_state(callback: CallbackQuery):
     :param callback: callback
     :return:None
     """
-    await callback.answer(text='Наберите команду /start')
+    try:
+        await callback.answer(text='Наберите команду /start\nИли нажмите кнопку "Выбор категории"')
+    except Exception as err:
+        await log.log(text=f'[{str(callback.message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error', facility=os.path.basename(__file__))
+        await callback.message.answer(text='Что-то пошло не так...\nПопробуйте ещё раз.')
 
 
 # State - choosing_choosing_category
@@ -48,6 +52,13 @@ async def callbacks_choosing_category(callback: CallbackQuery, callback_data: Us
     :return: None
     """
     try:
+        # удаляем клавиатуру и сообщение после нажатия
+        await callback.message.delete()
+        # удаляем клавиатуру после нажатия
+        # await callback.message.edit_reply_markup()
+        # убираем "часики" на кнопке
+        # await callback.answer()
+
         category = callback_data.choice
         # print(f'Категория - {category}')
         # записываем выбранную категорию в хранилище FSM
@@ -77,13 +88,6 @@ async def callbacks_choosing_category(callback: CallbackQuery, callback_data: Us
         # Устанавливаем пользователю состояние 'choosing_vendor'
         await state.set_state(UserState.choosing_vendor)
 
-        # удаляем клавиатуру и сообщение после нажатия
-        await callback.message.delete()
-
-        # удаляем клавиатуру после нажатия
-        # await callback.message.edit_reply_markup()
-        # убираем "часики" на кнопке
-        # await callback.answer()
     except Exception as err:
         await log.log(text=f'[{str(callback.message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error', facility=os.path.basename(__file__))
         await callback.message.answer(text='Что-то пошло не так...\nПопробуйте ещё раз.')
@@ -98,18 +102,22 @@ async def callbacks_choosing_vendor_back(callback: CallbackQuery, state: FSMCont
     :param state: Текущий статус пользователя
     :return: None
     """
-    # category = callback_data.choice
-    # print(f'Была выбрана категория - {category}')
-    # Устанавливаем пользователю состояние 'choosing_category'
-    await state.set_state(UserState.choosing_category)
+    try:
+        # удаляем клавиатуру и сообщение после нажатия
+        await callback.message.delete()
+        # удаляем клавиатуру после нажатия
+        # await callback.message.edit_reply_markup()
 
-    # удаляем клавиатуру и сообщение после нажатия
-    await callback.message.delete()
+        # category = callback_data.choice
+        # print(f'Была выбрана категория - {category}')
+        # Устанавливаем пользователю состояние 'choosing_category'
+        await state.set_state(UserState.choosing_category)
 
-    # удаляем клавиатуру после нажатия
-    # await callback.message.edit_reply_markup()
-    # заново вызываем обработчик
-    await main_menu(callback.message, state)
+        # заново вызываем обработчик
+        await main_menu(callback.message, state)
+    except Exception as err:
+        await log.log(text=f'[{str(callback.message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error', facility=os.path.basename(__file__))
+        await callback.message.answer(text='Что-то пошло не так...\nПопробуйте ещё раз.')
 
 
 # State - choosing_vendor
@@ -123,6 +131,13 @@ async def callbacks_choosing_vendor(callback: CallbackQuery, callback_data: User
     :return: None
     """
     try:
+        # удаляем клавиатуру и сообщение после нажатия
+        await callback.message.delete()
+        # удаляем клавиатуру после нажатия
+        # await callback.message.edit_reply_markup()
+        # убираем часики
+        # await callback.answer()
+
         user_data = await state.get_data()
         category = user_data['chosen_category']
 
@@ -168,12 +183,6 @@ async def callbacks_choosing_vendor(callback: CallbackQuery, callback_data: User
         # очистка State
         # await state.clear()
 
-        # удаляем клавиатуру и сообщение после нажатия
-        await callback.message.delete()
-
-        # удаляем клавиатуру после нажатия
-        # await callback.message.edit_reply_markup()
-        # await callback.answer()
     except Exception as err:
         await log.log(text=f'[{str(callback.message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error', facility=os.path.basename(__file__))
         await callback.message.answer(text='Что-то пошло не так...\nПопробуйте ещё раз.')
@@ -188,21 +197,30 @@ async def callbacks_studying_products_back(callback: CallbackQuery, state: FSMCo
     :param state: Текущий статус пользователя
     :return: None
     """
-    user_data = await state.get_data()
-    category = user_data['chosen_category']
+    try:
+        user_data = await state.get_data()
+        category = user_data['chosen_category']
 
-    # Устанавливаем пользователю состояние 'choosing_category'
-    await state.set_state(UserState.choosing_category)
+        # Устанавливаем пользователю состояние 'choosing_category'
+        await state.set_state(UserState.choosing_category)
 
-    # очистка State
-    # await state.clear()
+        # очистка State
+        # await state.clear()
 
-    # удаляем клавиатуру и сообщение после нажатия
-    # await callback.message.delete()
+        # удаляем клавиатуру и сообщение после нажатия
+        # await callback.message.delete()
 
-    # удаляем клавиатуру после нажатия
-    # await callback.message.edit_reply_markup()
+        # удаляем клавиатуру после нажатия
+        # await callback.message.edit_reply_markup()
 
-    # заново вызываем обработчик
-    await callbacks_choosing_category(callback, UserChoiceCallbackFactory(action='category', choice=category), state)
+        # заново вызываем обработчик
+        await callbacks_choosing_category(callback, UserChoiceCallbackFactory(action='category', choice=category), state)
+    except Exception as err:
+        await log.log(text=f'[{str(callback.message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error', facility=os.path.basename(__file__))
+        await callback.message.answer(text='Что-то пошло не так...\nПопробуйте ещё раз.')
+
+# Бот не может очистить историю чата.
+# В Aiogram есть метод deleteMessage, в котором обязательным параметром является указание message_id, которое необходимо удалить.
+# Можно записывать все id сообщений в БД, а затем, периодически циклом чистить историю чата.
+# Но нужно помнить, что могут быть удалены сообщения, которые не старше 48 часов
 
