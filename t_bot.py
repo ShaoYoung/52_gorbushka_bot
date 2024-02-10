@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import asyncio
 import logging
 import inspect
@@ -13,6 +15,7 @@ from aiogram.enums import ParseMode
 from datetime import datetime
 
 import aiocron
+# import daemon
 
 from handlers import common
 from handlers import maintenance
@@ -20,6 +23,12 @@ from handlers import user_selections
 from handlers import unknown
 
 from core import core_log as log
+
+from core.db import db
+# from core.db_ssh import db
+
+from handlers.common import set_registered_users_id
+
 
 # bot
 # bot = Bot(token=config.bot_token.get_secret_value(), parse_mode=ParseMode.HTML)
@@ -76,11 +85,17 @@ async def main(maintenance_mode: bool = False):
     # Время можно удобно настроить на сайте: https://crontab.guru/
     # Импортируйте aiocron и добавьте cron-задачу для отправки рассылки:
     # m h d(month) m d(week)
-    @aiocron.crontab("30 * * * *")
-    async def notifications():
-        for tg_user in await get_broadcast_list():
-            await bot.send_message(chat_id=tg_user, text=f'Время {datetime.now().strftime("%d/%m/%Y, %H:%M:%S")}. Бот работает.')
-        print(datetime.now())
+    @aiocron.crontab("0 */6 * * *")
+    async def bot_is_alive():
+        try:
+            for tg_user in await get_broadcast_list():
+                await bot.send_message(chat_id=tg_user, text=f'Время {datetime.now().strftime("%d/%m/%Y, %H:%M:%S")}. Бот работает.')
+        except Exception as err:
+            await log.log(text=f'[no chat_id] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error',
+                          facility=os.path.basename(__file__))
+
+    # загружаем список зарегистрированных действующих пользователей в список
+    await set_registered_users_id()
 
     # Если не указать storage, то по умолчанию всё равно будет MemoryStorage
     dp = Dispatcher(maintenance_mode=maintenance_mode, storage=MemoryStorage())
@@ -98,7 +113,16 @@ async def main(maintenance_mode: bool = False):
     await dp.start_polling(bot)
 
 
+async def test_db():
+    query = 'select * from users u where active = TRUE'
+    print(await db.fetch(query=query))
+    query = "INSERT INTO users (name, tg_id, active) VALUES ('Cheese', 111, true)"
+    print(await db.execute(query=query))
+
 if __name__ == "__main__":
+    # with daemon.DaemonContext():
     # точка входа
     asyncio.run(main())
+
+    # asyncio.run(test_db())
 
