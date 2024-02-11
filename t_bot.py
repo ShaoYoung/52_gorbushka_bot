@@ -21,14 +21,15 @@ from handlers import common
 from handlers import maintenance
 from handlers import user_selections
 from handlers import unknown
+from handlers.common import set_registered_users_id
 
 from core import core_log as log
 
-from core.db import db
+from sender import send_bot_is_alive
+from sender import send_product_events
+
+# from core.db import db
 # from core.db_ssh import db
-
-from handlers.common import set_registered_users_id
-
 
 # bot
 # bot = Bot(token=config.bot_token.get_secret_value(), parse_mode=ParseMode.HTML)
@@ -50,12 +51,12 @@ from aiogram.exceptions import TelegramBadRequest
 #         if ex.message == "Bad Request: message to delete not found":
 #             print("Все сообщения удалены")
 
-async def get_broadcast_list() -> list:
-    """
-    Получить список telegram_id для рассылки
-    :return: list
-    """
-    return [5107502329]
+# async def get_broadcast_list() -> list:
+#     """
+#     Получить список telegram_id для рассылки
+#     :return: list
+#     """
+#     return [5107502329]
 
 
 async def main(maintenance_mode: bool = False):
@@ -87,12 +88,19 @@ async def main(maintenance_mode: bool = False):
     # m h d(month) m d(week)
     @aiocron.crontab("0 */6 * * *")
     async def bot_is_alive():
-        try:
-            for tg_user in await get_broadcast_list():
-                await bot.send_message(chat_id=tg_user, text=f'Время {datetime.now().strftime("%d/%m/%Y, %H:%M:%S")}. Бот работает.')
-        except Exception as err:
-            await log.log(text=f'[no chat_id] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error',
-                          facility=os.path.basename(__file__))
+        await send_bot_is_alive(bot=bot)
+        # try:
+        #     for tg_user in await get_broadcast_list():
+        #         await bot.send_message(chat_id=tg_user, text=f'Время {datetime.now().strftime("%d/%m/%Y, %H:%M:%S")}. Бот работает.')
+        # except Exception as err:
+        #     await log.log(text=f'[no chat_id] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error',
+        #                   facility=os.path.basename(__file__))
+
+    # @aiocron.crontab("* * * * *")
+    # @aiocron.crontab("0 */4 * * *")
+    @aiocron.crontab("*/10 * * * *")
+    async def product_events():
+        await send_product_events(bot=bot)
 
     # загружаем список зарегистрированных действующих пользователей в список
     await set_registered_users_id()
@@ -113,16 +121,8 @@ async def main(maintenance_mode: bool = False):
     await dp.start_polling(bot)
 
 
-async def test_db():
-    query = 'select * from users u where active = TRUE'
-    print(await db.fetch(query=query))
-    query = "INSERT INTO users (name, tg_id, active) VALUES ('Cheese', 111, true)"
-    print(await db.execute(query=query))
-
 if __name__ == "__main__":
     # with daemon.DaemonContext():
     # точка входа
     asyncio.run(main())
-
-    # asyncio.run(test_db())
 

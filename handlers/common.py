@@ -33,7 +33,7 @@ from keyboards.keyboards import get_inline_keyboard
 router = Router()
 
 # имя файла с пользователями
-bot_users_file = 'bot_users.json'
+# bot_users_file = 'bot_users.json'
 # список id пользователей (глобальный, хранится в памяти во время работы бота)
 registered_users_id = list()
 # Дата последнего обновления и курсы USD (для кэширования курсов во время работы бота, т.к. в API есть ограничения)
@@ -63,8 +63,8 @@ async def set_registered_users_id() -> None:
         registered_users_id.clear()
         query = 'select tg_id from users where active = TRUE'
         for tg_id in await db.fetch(query=query):
-            registered_users_id.append(tg_id)
-        print(registered_users_id)
+            registered_users_id.append(tg_id[0])
+        # print(registered_users_id)
     except Exception as err:
         await log.log(text=f'[no chat_id] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error',
                       facility=os.path.basename(__file__))
@@ -80,6 +80,7 @@ async def add_new_user(user: dict) -> bool:
         global registered_users_id
         # добавляем id пользователя в список
         registered_users_id.append(user.get('id'))
+        # print(registered_users_id)
 
         # # дописываем пользователя в файл
         # if os.path.exists(bot_users_file):
@@ -109,6 +110,15 @@ async def add_new_user(user: dict) -> bool:
     except Exception as err:
         await log.log(text=f'[no chat_id] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error',
                       facility=os.path.basename(__file__))
+
+
+async def get_registered_users_id() -> list:
+    """
+    Получить telegram_id зарегистрированных пользователей
+    :return: list
+    """
+    global registered_users_id
+    return registered_users_id
 
 
 async def get_course_cbrf(currency: str = 'USD') -> float:
@@ -184,10 +194,10 @@ async def main_menu(message: Message, state: FSMContext):
         # очистка State
         await state.clear()
 
-        # keyboard = await get_reply_keyboard(['Выбор категории', 'Отписаться', 'USD/RUB', 'График USD/RUB'], [2])
+        # keyboard = await get_reply_keyboard(['Выбор категории', 'Отписаться', '💲 USD/RUB', 'График USD/RUB'], [2])
         # 27.01.2024 пока заменил на 2 кнопки
-        # 10.02.2024 пока заменил на 3 кнопки (добавил "Отписаться")
-        keyboard = await get_reply_keyboard(['Выбор категории', 'USD/RUB', 'Отписаться'], [2])
+        # 11.02.2024 пока заменил на 4 кнопки (добавил '✔Подписаться', '❌Отписаться')
+        keyboard = await get_reply_keyboard(['Выбор категории', 'USD/RUB', '✔Подписаться', '❌Отписаться'], [2])
         # Удаление клавы
         # keyboard = ReplyKeyboardRemove()
         await message.answer(text='Я могу вам предложить', reply_markup=keyboard)
@@ -225,12 +235,8 @@ async def cmd_start(message: Message, state: FSMContext):
     """
     try:
         global registered_users_id
-        # при первой команде /start заполняем список telegram-id пользователей
-        # если заполняем список telegram-id пользователей не заполнен, то заполняем его
-        if not registered_users_id:
-            await set_registered_users_id()
 
-        # если id пользователя не в списке, то регистрируем его
+        # если id пользователя не в списке, то пока просто регистрируем его
         if message.chat.id not in registered_users_id:
             if await add_new_user({'id': message.chat.id, 'full_name': message.from_user.full_name}):
                 await message.answer(text='Я вас зарегистрировал, можете работать.')
@@ -402,7 +408,7 @@ async def return_in_main_menu(message: Message, state: FSMContext):
         await message.answer(text='Что-то пошло не так...\nПопробуйте ещё раз.')
 
 
-@router.message(F.text == 'Отписаться')
+@router.message(F.text == '❌Отписаться')
 async def unsubscribe(message: Message, state: FSMContext):
     """
     Отписаться
@@ -416,9 +422,8 @@ async def unsubscribe(message: Message, state: FSMContext):
 
         global registered_users_id
         # если список telegram-id пользователей не заполнен, то заполняем его
-        if not registered_users_id:
-            await set_registered_users_id()
-
+        # if not registered_users_id:
+        #     await set_registered_users_id()
         if message.chat.id in registered_users_id:
             registered_users_id.remove(message.chat.id)
             # делаем пользователя неактивным в таблице users БД
@@ -426,9 +431,39 @@ async def unsubscribe(message: Message, state: FSMContext):
             # print(query)
             await db.execute(query=query)
             await message.answer(text='Вы успешно отписаны от бота')
+        else:
+            await message.answer(text='В списке вас нет')
 
     except Exception as err:
         await log.log(text=f'[{str(message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error', facility=os.path.basename(__file__))
+        await message.answer(text='Что-то пошло не так...\nПопробуйте ещё раз.')
+
+
+@router.message(F.text == '✔Подписаться')
+async def unsubscribe(message: Message, state: FSMContext):
+    """
+    Подписаться
+    :param message: сообщение
+    :param state: текущий статус
+    :return: None
+    """
+    try:
+        # очистка State
+        await state.clear()
+        global registered_users_id
+
+        # если id пользователя не в списке, то регистрируем его
+        if message.chat.id not in registered_users_id:
+            if await add_new_user({'id': message.chat.id, 'full_name': message.from_user.full_name}):
+                await message.answer(text='Я вас зарегистрировал, можете работать.')
+            else:
+                await message.answer(text='Зарегистрировать вас у меня не получилось.')
+        # переход в основное меню
+        else:
+            await message.answer(text='Вы уже в подписке')
+    except Exception as err:
+        await log.log(text=f'[{str(message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}',
+                      severity='error', facility=os.path.basename(__file__))
         await message.answer(text='Что-то пошло не так...\nПопробуйте ещё раз.')
 
 
@@ -511,12 +546,20 @@ async def cmd_get_bot_users(message: Message, state: FSMContext):
         #     await message.answer(text='У бота пока нет пользователей.')
 
         # из таблицы users БД
-        # получаем full_name всех пользователей из таблицы users со статусом active = True
-        query = 'select name from users where active = TRUE'
-        text_answer = ''
-        for count, user in enumerate(await db.fetch(query=query), start=1):
-            text_answer += f'{count}. {user[0]}\n'
-        text_answer = f'Пользователи бота:\n{text_answer}' if len(text_answer) else 'У бота пока нет пользователей.'
+        # получаем full_name, active всех пользователей из таблицы users с заполненным tg_id
+        query = 'SELECT name, active FROM users WHERE tg_id is not NULL'
+        subs_users = ''
+        subs_count = 0
+        unsubs_users = ''
+        unsubs_count = 0
+        for user in await db.fetch(query=query):
+            if user[1]:
+                subs_count += 1
+                subs_users += f'{subs_count}. {user[0]}\n'
+            else:
+                unsubs_count += 1
+                unsubs_users += f'{unsubs_count}. {user[0]}\n'
+        text_answer = f'Пользователи бота ✔:\n{subs_users}\nПользователи бота ❌:\n{unsubs_users}' if len(subs_users + unsubs_users) else 'У бота пока нет пользователей.'
         await message.answer(text=text_answer)
 
     except Exception as err:
@@ -550,7 +593,7 @@ async def cmd_macro(message: Message, state: FSMContext):
 
 
 @router.message(F.text.startswith(''))
-async def cmd_incorrectly(message: Message, state: FSMContext):
+async def find_in_db(message: Message, state: FSMContext):
     """
     Обработчик неизвестного текста (инициирует поиск в БД)
     :param message: текстовое сообщение
