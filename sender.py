@@ -6,6 +6,7 @@ from datetime import datetime
 
 from core import core_log as log
 from handlers.common import get_registered_users_id
+from handlers.common import split_text
 
 from core.db import db
 # from core.db_ssh import db
@@ -46,17 +47,30 @@ async def send_product_events(bot: Bot) -> None:
         query = f"SELECT vendor, description, event FROM history where dt > now() - interval '{interval}'"
         # print(query)
         product_events = ''
+        # text_answer = ''
         for count, row in enumerate(await db.fetch(query=query), start=1):
-            product_events += f'{count}. {row[0]}, {row[1]}, {row[2]}\n'
-        text_answer = f'За прошедший {interval} произошли следующие изменения:\n{product_events}' if len(product_events) else f'За прошедший {interval} изменений не было'
+            product_events += f'<b><u>{count}.</u></b> {row[0]}, {row[1]}, {row[2]}\n'
+            # text_answer += f'<b><u>{count}.</u></b> {row[0]}, {row[1]}, {row[2]}\n'
 
-        # print(await get_registered_users_id())
+        text_answer = f'За прошедший(е) {interval} произошли следующие изменения:\n{product_events}' if len(product_events) else f'За прошедший(е) {interval} изменений не было'
+
+        # if text_answer:
+
         # TODO рассылка каждому подписчику
         for tg_user in await get_registered_users_id():
-            if tg_user == 414366402 or tg_user == 5107502329:
-                # пока только админам
-                # for tg_user in await get_admins_id():
-                await bot.send_message(chat_id=tg_user, text=text_answer)
+            # пока только админам. потом убрать
+            # if tg_user == 414366402 or tg_user == 5107502329:
+            if tg_user == 5107502329:
+
+                # если текст есть и он больше 4096 символов, то его надо резать на разные сообщения
+                if len(text_answer) > 4096:
+                    for part_text in await split_text(text=text_answer):
+                        # передаём порцию текста
+                        await bot.send_message(chat_id=tg_user, text=part_text)
+                # если текст есть, но он меньше 4096 символов, то его можно передать одним сообщением
+                else:
+                    # for tg_user in await get_admins_id():
+                    await bot.send_message(chat_id=tg_user, text=text_answer)
 
     except Exception as err:
         await log.log(text=f'[no chat_id] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error',

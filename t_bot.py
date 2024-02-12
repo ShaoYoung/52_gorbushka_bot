@@ -98,7 +98,7 @@ async def main(maintenance_mode: bool = False):
 
     # @aiocron.crontab("* * * * *")
     # @aiocron.crontab("0 */4 * * *")
-    @aiocron.crontab("*/10 * * * *")
+    @aiocron.crontab("*/5 * * * *")
     async def product_events():
         await send_product_events(bot=bot)
 
