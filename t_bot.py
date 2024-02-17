@@ -86,7 +86,7 @@ async def main(maintenance_mode: bool = False):
     # Время можно удобно настроить на сайте: https://crontab.guru/
     # Импортируйте aiocron и добавьте cron-задачу для отправки рассылки:
     # m h d(month) m d(week)
-    @aiocron.crontab("0 */6 * * *")
+    @aiocron.crontab("0 */8 * * *")
     async def bot_is_alive():
         await send_bot_is_alive(bot=bot)
         # try:
@@ -98,7 +98,7 @@ async def main(maintenance_mode: bool = False):
 
     # @aiocron.crontab("* * * * *")
     # @aiocron.crontab("0 */4 * * *")
-    @aiocron.crontab("*/5 * * * *")
+    @aiocron.crontab("*/2 * * * *")
     async def product_events():
         await send_product_events(bot=bot)
 

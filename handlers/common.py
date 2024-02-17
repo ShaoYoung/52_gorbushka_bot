@@ -14,11 +14,15 @@ from aiogram.types import FSInputFile, URLInputFile
 # from core import core_pg as pg
 # from core import core_asyncpg as pg
 
-from core.db import db
-# from core.db_ssh import db
+# from core.db_pool import db
+# from core.db import db
+from core.db_ssh import db
+
 
 from config import macro
 from core import core_log as log
+
+from utils import save_matrix_to_excel
 
 import os
 import json
@@ -62,7 +66,10 @@ async def set_registered_users_id() -> None:
         # из таблицы users БД
         registered_users_id.clear()
         query = 'select tg_id from users where active = TRUE'
-        for tg_id in await db.fetch(query=query):
+        await db.connect()
+        rows = await db.fetch(query=query)
+        await db.disconnect()
+        for tg_id in rows:
             registered_users_id.append(tg_id[0])
         # print(registered_users_id)
     except Exception as err:
@@ -95,7 +102,9 @@ async def add_new_user(user: dict) -> bool:
 
         # ищем пользователя в таблице users по telegram_id
         query = f"SELECT active from users where tg_id = {user.get('id')}"
+        await db.connect()
         rows = await db.fetch(query=query)
+        await db.disconnect()
         # print(rows)
         # если пользователь есть, то возвращаем ему активность
         if rows:
@@ -104,7 +113,9 @@ async def add_new_user(user: dict) -> bool:
         else:
             query = f"INSERT INTO users (name, tg_id, active) VALUES ('{user.get('full_name')}', {user.get('id')}, True)"
         # print(query)
+        await db.connect()
         await db.execute(query=query)
+        await db.disconnect()
         return True
 
     except Exception as err:
@@ -197,7 +208,7 @@ async def main_menu(message: Message, state: FSMContext):
         # keyboard = await get_reply_keyboard(['Выбор категории', 'Отписаться', '💲 USD/RUB', 'График USD/RUB'], [2])
         # 27.01.2024 пока заменил на 2 кнопки
         # 11.02.2024 пока заменил на 4 кнопки (добавил '✔Подписаться', '❌Отписаться')
-        keyboard = await get_reply_keyboard(['Выбор категории', 'USD/RUB', '✔Подписаться', '❌Отписаться'], [2])
+        keyboard = await get_reply_keyboard(['Выбор категории', 'USD/RUB', '✔Подписаться', '❌Отписаться', 'Получить Excel-файл'], [2])
         # Удаление клавы
         # keyboard = ReplyKeyboardRemove()
         await message.answer(text='Я могу вам предложить', reply_markup=keyboard)
@@ -208,7 +219,9 @@ async def main_menu(message: Message, state: FSMContext):
         group = "group by category order by category"
         query += where + group
         # print(query)
+        await db.connect()
         rows = await db.fetch(query=query)
+        await db.disconnect()
         # rows = pg.execute(query)
         buttons = {}
         for row in rows:
@@ -293,19 +306,20 @@ async def cmd_alllist(message: Message, state: FSMContext):
         order.append("УМНАЯ КОЛОНКА")
 
         # предупреждаем пользователя, что дело не быстрое
-        await message.answer(text='⌛ собираю информацию, немного подождите ⌛')
+        # await message.answer(text='⌛ собираю информацию, немного подождите ⌛')
 
         #
         # 1 Сначала берём список Категорий
         # 2 Для каждой категории список Вендоров
         # 3 Для каждого вендора список Товаров
         #
-        text = ""
+        text = ''
         #
         # query Vendor
         #
         queryV = "select distinct vendor from warehouse where warehouse_id=40 and balance>0 order by vendor"
-        rowsV = await db.fetch(query=queryV)
+        await db.connect()
+        rowsV = await db.fetch(query=queryV, autodisconnect=False)
         # rowsV    = pg.execute( queryV, conn=env['db']['conn'] )
         for rowV in rowsV:
             # если вендора ещё нет, то добавляем
@@ -322,7 +336,7 @@ async def cmd_alllist(message: Message, state: FSMContext):
             #
             queryC = "select distinct category from warehouse where warehouse_id=40 and balance>0 and vendor = '" + str(
                 vendor) + "' order by category"
-            rowsC = await db.fetch(query=queryC)
+            rowsC = await db.fetch(query=queryC, autodisconnect=False)
             # rowsC    = pg.execute( queryC, conn=env['db']['conn'] )
             for rowC in rowsC:
                 #
@@ -335,11 +349,12 @@ async def cmd_alllist(message: Message, state: FSMContext):
                 #
                 queryP = "select description, price from warehouse where warehouse_id=40 and balance>0 and category = '" + str(
                     rowC[0]) + "' and vendor='" + str(vendor) + "' order by description"
-                rowsP = await db.fetch(query=queryP)
+                rowsP = await db.fetch(query=queryP, autodisconnect=False)
                 # rowsP   = pg.execute( queryP, conn=env['db']['conn'] )
                 for rowP in rowsP:
                     text += f'{rowP[0]} - {rowP[1]}\n'
                     # text += "{0}  - {1}\n".format( rowP[0], rowP[1] )
+        await db.disconnect()
 
         #
         # Macro replace
@@ -429,7 +444,9 @@ async def unsubscribe(message: Message, state: FSMContext):
             # делаем пользователя неактивным в таблице users БД
             query = f"UPDATE users SET active = False WHERE tg_id = {message.chat.id}"
             # print(query)
+            await db.connect()
             await db.execute(query=query)
+            await db.disconnect()
             await message.answer(text='Вы успешно отписаны от бота')
         else:
             await message.answer(text='В списке вас нет')
@@ -552,7 +569,10 @@ async def cmd_get_bot_users(message: Message, state: FSMContext):
         subs_count = 0
         unsubs_users = ''
         unsubs_count = 0
-        for user in await db.fetch(query=query):
+        await db.connect()
+        rows = await db.fetch(query=query)
+        await db.disconnect()
+        for user in rows:
             if user[1]:
                 subs_count += 1
                 subs_users += f'{subs_count}. {user[0]}\n'
@@ -592,6 +612,38 @@ async def cmd_macro(message: Message, state: FSMContext):
         await message.answer(text='Что-то пошло не так...\nПопробуйте ещё раз.')
 
 
+@router.message(F.text == 'Получить Excel-файл')
+@router.message(Command(commands='get_excel'))
+async def cmd_get_excel(message: Message, state: FSMContext):
+    """
+    Отправка файла с логами в чат пользователю
+    :param message:
+    :param state: текущий статус
+    :return:
+    """
+    try:
+        # очистка State
+        await state.clear()
+
+        query = 'SELECT product_id, category, vendor, description, price from warehouse WHERE balance > 0 ORDER BY category, vendor, description'
+        await db.connect()
+        rows = await db.fetch(query=query)
+        await db.disconnect()
+        # print('Файл готов к записи')
+        rows = list(map(list, rows))
+        await save_matrix_to_excel(rows)
+        # print('Файл записан')
+
+        filename = 'excel_files/products.xlsx'
+        await message.answer(text='Файл с товарами:')
+        file_from_pc = FSInputFile(filename)
+
+        await message.answer_document(file_from_pc)
+    except Exception as err:
+        await log.log(text=f'[{str(message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error', facility=os.path.basename(__file__))
+        await message.answer(text='Что-то пошло не так...\nПопробуйте ещё раз.')
+
+
 @router.message(F.text.startswith(''))
 async def find_in_db(message: Message, state: FSMContext):
     """
@@ -611,8 +663,9 @@ async def find_in_db(message: Message, state: FSMContext):
         query += where + order
         # print(query)
 
+        await db.connect()
         rows = await db.fetch(query=query)
-
+        await db.disconnect()
         if rows:
             text = f'Результат поиска: <b>"{query_text}"</b>:\n'
             for row in rows:
@@ -630,5 +683,6 @@ async def find_in_db(message: Message, state: FSMContext):
     except Exception as err:
         await log.log(text=f'[{str(message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error', facility=os.path.basename(__file__))
         await message.answer(text='Что-то пошло не так...\nПопробуйте ещё раз.')
+
 
 
