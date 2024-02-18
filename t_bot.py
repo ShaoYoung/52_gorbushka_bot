@@ -28,6 +28,8 @@ from core import core_log as log
 from sender import send_bot_is_alive
 from sender import send_product_events
 
+from utils import save_products
+
 # from core.db import db
 # from core.db_ssh import db
 
@@ -100,7 +102,8 @@ async def main(maintenance_mode: bool = False):
     # @aiocron.crontab("0 */4 * * *")
     @aiocron.crontab("*/2 * * * *")
     async def product_events():
-        await send_product_events(bot=bot)
+        if await send_product_events(bot=bot):
+            await save_products()
 
     # загружаем список зарегистрированных действующих пользователей в список
     await set_registered_users_id()

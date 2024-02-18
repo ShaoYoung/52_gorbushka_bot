@@ -15,14 +15,14 @@ from aiogram.types import FSInputFile, URLInputFile
 # from core import core_asyncpg as pg
 
 # from core.db_pool import db
-# from core.db import db
-from core.db_ssh import db
+from core.db import db
+# from core.db_ssh import db
 
 
 from config import macro
 from core import core_log as log
 
-from utils import save_matrix_to_excel
+from utils import save_products
 
 import os
 import json
@@ -235,7 +235,7 @@ async def main_menu(message: Message, state: FSMContext):
         await state.set_state(UserState.choosing_category)
     except Exception as err:
         await log.log(text=f'[{str(message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error', facility=os.path.basename(__file__))
-        await message.answer(text='Что-то пошло не так...\nПопробуйте ещё раз.')
+        await message.answer(text='Не понял последнюю команду.\nПовторите, пожалуйста.')
 
 
 @router.message(Command(commands=['start']))
@@ -259,7 +259,7 @@ async def cmd_start(message: Message, state: FSMContext):
         await main_menu(message, state)
     except Exception as err:
         await log.log(text=f'[{str(message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error', facility=os.path.basename(__file__))
-        await message.answer(text='Что-то пошло не так...\nПопробуйте ещё раз.')
+        await message.answer(text='Не понял последнюю команду.\nПовторите, пожалуйста.')
 
 
 @router.message(Command(commands=['alllist']))
@@ -379,7 +379,7 @@ async def cmd_alllist(message: Message, state: FSMContext):
 
     except Exception as err:
         await log.log(text=f'[{str(message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error', facility=os.path.basename(__file__))
-        await message.answer(text='Что-то пошло не так...\nПопробуйте ещё раз.')
+        await message.answer(text='Не понял последнюю команду.\nПовторите, пожалуйста.')
 
 
 @router.message(Command(commands=['about']))
@@ -403,7 +403,7 @@ async def cmd_about(message: Message, state: FSMContext):
         await message.answer(text=about_content)
     except Exception as err:
         await log.log(text=f'[{str(message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error', facility=os.path.basename(__file__))
-        await message.answer(text='Что-то пошло не так...\nПопробуйте ещё раз.')
+        await message.answer(text='Не понял последнюю команду.\nПовторите, пожалуйста.')
 
 
 @router.message(F.text == 'Выбор категории')
@@ -420,7 +420,7 @@ async def return_in_main_menu(message: Message, state: FSMContext):
         await main_menu(message, state)
     except Exception as err:
         await log.log(text=f'[{str(message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error', facility=os.path.basename(__file__))
-        await message.answer(text='Что-то пошло не так...\nПопробуйте ещё раз.')
+        await message.answer(text='Не понял последнюю команду.\nПовторите, пожалуйста.')
 
 
 @router.message(F.text == '❌Отписаться')
@@ -453,7 +453,7 @@ async def unsubscribe(message: Message, state: FSMContext):
 
     except Exception as err:
         await log.log(text=f'[{str(message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error', facility=os.path.basename(__file__))
-        await message.answer(text='Что-то пошло не так...\nПопробуйте ещё раз.')
+        await message.answer(text='Не понял последнюю команду.\nПовторите, пожалуйста.')
 
 
 @router.message(F.text == '✔Подписаться')
@@ -481,7 +481,7 @@ async def unsubscribe(message: Message, state: FSMContext):
     except Exception as err:
         await log.log(text=f'[{str(message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}',
                       severity='error', facility=os.path.basename(__file__))
-        await message.answer(text='Что-то пошло не так...\nПопробуйте ещё раз.')
+        await message.answer(text='Не понял последнюю команду.\nПовторите, пожалуйста.')
 
 
 @router.message(F.text == 'USD/RUB')
@@ -503,7 +503,7 @@ async def get_course_usd_rub(message: Message, state: FSMContext):
         await message.answer(text=f'Курс USD = {exchange_rates.get("rates")[-1]}')
     except Exception as err:
         await log.log(text=f'[{str(message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error', facility=os.path.basename(__file__))
-        await message.answer(text='Что-то пошло не так...\nПопробуйте ещё раз.')
+        await message.answer(text='Не понял последнюю команду.\nПовторите, пожалуйста.')
 
 
 @router.message(F.text == 'График USD/RUB')
@@ -516,7 +516,7 @@ async def get_chart_usd_rub(message: Message, state: FSMContext):
         await message.answer(text='График в работе')
     except Exception as err:
         await log.log(text=f'[{str(message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error', facility=os.path.basename(__file__))
-        await message.answer(text='Что-то пошло не так...\nПопробуйте ещё раз.')
+        await message.answer(text='Не понял последнюю команду.\nПовторите, пожалуйста.')
 
 
 @router.message(Command(commands='get_log'))
@@ -536,7 +536,7 @@ async def cmd_log(message: Message, state: FSMContext):
         await message.answer_document(file_from_pc)
     except Exception as err:
         await log.log(text=f'[{str(message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error', facility=os.path.basename(__file__))
-        await message.answer(text='Что-то пошло не так...\nПопробуйте ещё раз.')
+        await message.answer(text='Не понял последнюю команду.\nПовторите, пожалуйста.')
 
 
 @router.message(Command(commands='get_bot_users'))
@@ -584,7 +584,7 @@ async def cmd_get_bot_users(message: Message, state: FSMContext):
 
     except Exception as err:
         await log.log(text=f'[{str(message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error', facility=os.path.basename(__file__))
-        await message.answer(text='Что-то пошло не так...\nПопробуйте ещё раз.')
+        await message.answer(text='Не понял последнюю команду.\nПовторите, пожалуйста.')
 
 
 @router.message(Command(commands=['macro']))
@@ -609,7 +609,7 @@ async def cmd_macro(message: Message, state: FSMContext):
         await message.answer(text=text)
     except Exception as err:
         await log.log(text=f'[{str(message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error', facility=os.path.basename(__file__))
-        await message.answer(text='Что-то пошло не так...\nПопробуйте ещё раз.')
+        await message.answer(text='Не понял последнюю команду.\nПовторите, пожалуйста.')
 
 
 @router.message(F.text == 'Получить Excel-файл')
@@ -625,23 +625,17 @@ async def cmd_get_excel(message: Message, state: FSMContext):
         # очистка State
         await state.clear()
 
-        query = 'SELECT product_id, category, vendor, description, price from warehouse WHERE balance > 0 ORDER BY category, vendor, description'
-        await db.connect()
-        rows = await db.fetch(query=query)
-        await db.disconnect()
-        # print('Файл готов к записи')
-        rows = list(map(list, rows))
-        await save_matrix_to_excel(rows)
-        # print('Файл записан')
-
         filename = 'excel_files/products.xlsx'
+        if not os.path.exists(filename):
+            # await message.answer(text='Файла ещё нет. Сейчас сформирую.')
+            await save_products()
         await message.answer(text='Файл с товарами:')
         file_from_pc = FSInputFile(filename)
 
         await message.answer_document(file_from_pc)
     except Exception as err:
         await log.log(text=f'[{str(message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error', facility=os.path.basename(__file__))
-        await message.answer(text='Что-то пошло не так...\nПопробуйте ещё раз.')
+        await message.answer(text='Не понял последнюю команду.\nПовторите, пожалуйста.')
 
 
 @router.message(F.text.startswith(''))
@@ -682,7 +676,7 @@ async def find_in_db(message: Message, state: FSMContext):
             await message.answer(text=f'Поиск <b>"{query_text}"</b> не дал результатов')
     except Exception as err:
         await log.log(text=f'[{str(message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error', facility=os.path.basename(__file__))
-        await message.answer(text='Что-то пошло не так...\nПопробуйте ещё раз.')
+        await message.answer(text='Не понял последнюю команду.\nПовторите, пожалуйста.')
 
 
 

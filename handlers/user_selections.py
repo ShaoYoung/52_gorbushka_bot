@@ -41,7 +41,7 @@ async def callbacks_without_state(callback: CallbackQuery):
         await callback.answer(text='Наберите команду /start\nИли нажмите кнопку "Выбор категории"')
     except Exception as err:
         await log.log(text=f'[{str(callback.message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error', facility=os.path.basename(__file__))
-        await callback.message.answer(text='Что-то пошло не так...\nПопробуйте ещё раз.')
+        await callback.message.answer(text='Не понял последнюю команду.\nПовторите, пожалуйста.')
 
 
 # State - choosing_choosing_category
@@ -96,7 +96,7 @@ async def callbacks_choosing_category(callback: CallbackQuery, callback_data: Us
 
     except Exception as err:
         await log.log(text=f'[{str(callback.message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error', facility=os.path.basename(__file__))
-        await callback.message.answer(text='Что-то пошло не так...\nПопробуйте ещё раз.')
+        await callback.message.answer(text='Не понял последнюю команду.\nПовторите, пожалуйста.')
 
 
 # State - choosing_vendor, action - back
@@ -123,7 +123,7 @@ async def callbacks_choosing_vendor_back(callback: CallbackQuery, state: FSMCont
         await main_menu(callback.message, state)
     except Exception as err:
         await log.log(text=f'[{str(callback.message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error', facility=os.path.basename(__file__))
-        await callback.message.answer(text='Что-то пошло не так...\nПопробуйте ещё раз.')
+        await callback.message.answer(text='Не понял последнюю команду.\nПовторите, пожалуйста.')
 
 
 # State - choosing_vendor
@@ -193,7 +193,7 @@ async def callbacks_choosing_vendor(callback: CallbackQuery, callback_data: User
 
     except Exception as err:
         await log.log(text=f'[{str(callback.message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error', facility=os.path.basename(__file__))
-        await callback.message.answer(text='Что-то пошло не так...\nПопробуйте ещё раз.')
+        await callback.message.answer(text='Не понял последнюю команду.\nПовторите, пожалуйста.')
 
 
 # State - studying_products, action - back
@@ -225,7 +225,7 @@ async def callbacks_studying_products_back(callback: CallbackQuery, state: FSMCo
         await callbacks_choosing_category(callback, UserChoiceCallbackFactory(action='category', choice=category), state)
     except Exception as err:
         await log.log(text=f'[{str(callback.message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error', facility=os.path.basename(__file__))
-        await callback.message.answer(text='Что-то пошло не так...\nПопробуйте ещё раз.')
+        await callback.message.answer(text='Не понял последнюю команду.\nПовторите, пожалуйста.')
 
 # Бот не может очистить историю чата.
 # В Aiogram есть метод deleteMessage, в котором обязательным параметром является указание message_id, которое необходимо удалить.

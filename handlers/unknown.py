@@ -30,4 +30,4 @@ async def unknown_message(message: Message, state: FSMContext):
         await message.reply(f'Я не знаю <b> что с этим делать </b>')
     except Exception as err:
         await log.log(text=f'[{str(message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error', facility=os.path.basename(__file__))
-        await message.answer(text='Что-то пошло не так...\nПопробуйте ещё раз.')
+        await message.answer(text='Не понял последнюю команду.\nПовторите, пожалуйста.')
