@@ -18,6 +18,7 @@ from aiogram.types import FSInputFile, URLInputFile
 from core.db import db
 # from core.db_ssh import db
 
+from users import reg_users
 
 from config import macro
 from core import core_log as log
@@ -36,10 +37,10 @@ from keyboards.keyboards import get_inline_keyboard
 
 router = Router()
 
-# имя файла с пользователями
+# Имя файла с пользователями
 # bot_users_file = 'bot_users.json'
 # список id пользователей (глобальный, хранится в памяти во время работы бота)
-registered_users_id = list()
+# registered_users_id = list()
 # Дата последнего обновления и курсы USD (для кэширования курсов во время работы бота, т.к. в API есть ограничения)
 exchange_rates = {
     'last_updated_datetime': datetime.utcnow().replace(year=2023),
@@ -47,89 +48,89 @@ exchange_rates = {
 }
 
 
-async def set_registered_users_id() -> None:
-    """
-    Заполнение списка registered_users_id (из файла / из БД)
-    :return: None
-    """
-    try:
-        global registered_users_id
-
-        # # из файла
-        # if os.path.exists(bot_users_file):
-        #     with open(bot_users_file, 'r') as json_file:
-        #         registered_users = json.load(json_file)
-        #         registered_users_id.clear()
-        #         for user in registered_users:
-        #             registered_users_id.append(user.get('id'))
-
-        # из таблицы users БД
-        registered_users_id.clear()
-        query = 'select tg_id from users where active = TRUE'
-        await db.connect()
-        rows = await db.fetch(query=query)
-        await db.disconnect()
-        for tg_id in rows:
-            registered_users_id.append(tg_id[0])
-        # print(registered_users_id)
-    except Exception as err:
-        await log.log(text=f'[no chat_id] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error',
-                      facility=os.path.basename(__file__))
-
-
-async def add_new_user(user: dict) -> bool:
-    """
-    Регистрация нового пользователя бота. Добавляет пользователя в файл / БД, добавляет id пользователя в список
-    :param user: пользователь (словарь{id, full_name})
-    :return: bool
-    """
-    try:
-        global registered_users_id
-        # добавляем id пользователя в список
-        registered_users_id.append(user.get('id'))
-        # print(registered_users_id)
-
-        # # дописываем пользователя в файл
-        # if os.path.exists(bot_users_file):
-        #     with open(bot_users_file, 'r') as json_file:
-        #         registered_users = json.load(json_file)
-        #     with open(bot_users_file, 'w') as json_file:
-        #         registered_users.append(user)
-        #         json.dump(registered_users, json_file)
-        # else:
-        #     with open(bot_users_file, 'w') as json_file:
-        #         json.dump([user], json_file)
-
-        # ищем пользователя в таблице users по telegram_id
-        query = f"SELECT active from users where tg_id = {user.get('id')}"
-        await db.connect()
-        rows = await db.fetch(query=query)
-        await db.disconnect()
-        # print(rows)
-        # если пользователь есть, то возвращаем ему активность
-        if rows:
-            query = f"UPDATE users SET active = True WHERE tg_id = {user.get('id')}"
-        # иначе записываем нового пользователя в таблицу users БД
-        else:
-            query = f"INSERT INTO users (name, tg_id, active) VALUES ('{user.get('full_name')}', {user.get('id')}, True)"
-        # print(query)
-        await db.connect()
-        await db.execute(query=query)
-        await db.disconnect()
-        return True
-
-    except Exception as err:
-        await log.log(text=f'[no chat_id] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error',
-                      facility=os.path.basename(__file__))
-
-
-async def get_registered_users_id() -> list:
-    """
-    Получить telegram_id зарегистрированных пользователей
-    :return: list
-    """
-    global registered_users_id
-    return registered_users_id
+# async def set_registered_users_id() -> None:
+#     """
+#     Заполнение списка registered_users_id (из файла / из БД)
+#     :return: None
+#     """
+#     try:
+#         global registered_users_id
+#
+#         # # из файла
+#         # if os.path.exists(bot_users_file):
+#         #     with open(bot_users_file, 'r') as json_file:
+#         #         registered_users = json.load(json_file)
+#         #         registered_users_id.clear()
+#         #         for user in registered_users:
+#         #             registered_users_id.append(user.get('id'))
+#
+#         # из таблицы users БД
+#         registered_users_id.clear()
+#         query = 'select tg_id from users where active = TRUE'
+#         await db.connect()
+#         rows = await db.fetch(query=query)
+#         await db.disconnect()
+#         for tg_id in rows:
+#             registered_users_id.append(tg_id[0])
+#         # print(registered_users_id)
+#     except Exception as err:
+#         await log.log(text=f'[no chat_id] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error',
+#                       facility=os.path.basename(__file__))
+#
+#
+# async def add_new_user(user: dict) -> bool:
+#     """
+#     Регистрация нового пользователя бота. Добавляет пользователя в файл / БД, добавляет id пользователя в список
+#     :param user: пользователь (словарь{id, full_name})
+#     :return: bool
+#     """
+#     try:
+#         global registered_users_id
+#         # добавляем id пользователя в список
+#         registered_users_id.append(user.get('id'))
+#         # print(registered_users_id)
+#
+#         # # дописываем пользователя в файл
+#         # if os.path.exists(bot_users_file):
+#         #     with open(bot_users_file, 'r') as json_file:
+#         #         registered_users = json.load(json_file)
+#         #     with open(bot_users_file, 'w') as json_file:
+#         #         registered_users.append(user)
+#         #         json.dump(registered_users, json_file)
+#         # else:
+#         #     with open(bot_users_file, 'w') as json_file:
+#         #         json.dump([user], json_file)
+#
+#         # ищем пользователя в таблице users по telegram_id
+#         query = f"SELECT active from users where tg_id = {user.get('id')}"
+#         await db.connect()
+#         rows = await db.fetch(query=query)
+#         await db.disconnect()
+#         # print(rows)
+#         # если пользователь есть, то возвращаем ему активность
+#         if rows:
+#             query = f"UPDATE users SET active = True WHERE tg_id = {user.get('id')}"
+#         # иначе записываем нового пользователя в таблицу users БД
+#         else:
+#             query = f"INSERT INTO users (name, tg_id, active) VALUES ('{user.get('full_name')}', {user.get('id')}, True)"
+#         # print(query)
+#         await db.connect()
+#         await db.execute(query=query)
+#         await db.disconnect()
+#         return True
+#
+#     except Exception as err:
+#         await log.log(text=f'[no chat_id] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error',
+#                       facility=os.path.basename(__file__))
+#
+#
+# async def get_registered_users_id() -> list:
+#     """
+#     Получить telegram_id зарегистрированных пользователей
+#     :return: list
+#     """
+#     global registered_users_id
+#     return registered_users_id
 
 
 async def get_course_cbrf(currency: str = 'USD') -> float:
@@ -247,11 +248,11 @@ async def cmd_start(message: Message, state: FSMContext):
     :return: None
     """
     try:
-        global registered_users_id
+        # global registered_users_id
 
         # если id пользователя не в списке, то пока просто регистрируем его
-        if message.chat.id not in registered_users_id:
-            if await add_new_user({'id': message.chat.id, 'full_name': message.from_user.full_name}):
+        if message.chat.id not in await reg_users.get():
+            if await reg_users.add({'id': message.chat.id, 'full_name': message.from_user.full_name}):
                 await message.answer(text='Я вас зарегистрировал, можете работать.')
             else:
                 await message.answer(text='Зарегистрировать вас у меня не получилось.')
@@ -399,7 +400,11 @@ async def cmd_about(message: Message, state: FSMContext):
         Мы рады приветствовать вас в нашем боте.
     
         Здесь вы можете ознакомиться с ассортиментом товаров и ценами.
-        По любым интересующим вопросам обращайтесь по телефону 8 963 962 7770"""
+        По любым интересующим вопросам обращайтесь по телефону 8 936 177 0022"""
+
+        # в 431 - 8 963 962 7770
+        # в 89 - 8 936 177 0022
+
         await message.answer(text=about_content)
     except Exception as err:
         await log.log(text=f'[{str(message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error', facility=os.path.basename(__file__))
@@ -435,21 +440,23 @@ async def unsubscribe(message: Message, state: FSMContext):
         # очистка State
         await state.clear()
 
-        global registered_users_id
+        # global registered_users_id
         # если список telegram-id пользователей не заполнен, то заполняем его
         # if not registered_users_id:
         #     await set_registered_users_id()
-        if message.chat.id in registered_users_id:
-            registered_users_id.remove(message.chat.id)
-            # делаем пользователя неактивным в таблице users БД
-            query = f"UPDATE users SET active = False WHERE tg_id = {message.chat.id}"
-            # print(query)
-            await db.connect()
-            await db.execute(query=query)
-            await db.disconnect()
-            await message.answer(text='Вы успешно отписаны от бота')
-        else:
-            await message.answer(text='В списке вас нет')
+        # if message.chat.id in registered_users_id:
+        #     registered_users_id.remove(message.chat.id)
+        #     # делаем пользователя неактивным в таблице users БД
+        #     query = f"UPDATE users SET active = False WHERE tg_id = {message.chat.id}"
+        #     # print(query)
+        #     await db.connect()
+        #     await db.execute(query=query)
+        #     await db.disconnect()
+        #     await message.answer(text='Вы успешно отписаны от бота')
+        # else:
+        #     await message.answer(text='В списке вас нет')
+        text_answer = await reg_users.deactivate(message.chat.id)
+        await message.answer(text=text_answer)
 
     except Exception as err:
         await log.log(text=f'[{str(message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error', facility=os.path.basename(__file__))
@@ -457,7 +464,7 @@ async def unsubscribe(message: Message, state: FSMContext):
 
 
 @router.message(F.text == '✔Подписаться')
-async def unsubscribe(message: Message, state: FSMContext):
+async def subscribe(message: Message, state: FSMContext):
     """
     Подписаться
     :param message: сообщение
@@ -467,17 +474,21 @@ async def unsubscribe(message: Message, state: FSMContext):
     try:
         # очистка State
         await state.clear()
-        global registered_users_id
+        # global registered_users_id
 
-        # если id пользователя не в списке, то регистрируем его
-        if message.chat.id not in registered_users_id:
-            if await add_new_user({'id': message.chat.id, 'full_name': message.from_user.full_name}):
-                await message.answer(text='Я вас зарегистрировал, можете работать.')
-            else:
-                await message.answer(text='Зарегистрировать вас у меня не получилось.')
-        # переход в основное меню
-        else:
-            await message.answer(text='Вы уже в подписке')
+        # # если id пользователя не в списке, то регистрируем его
+        # if message.chat.id not in registered_users_id:
+        #     if await add_new_user({'id': message.chat.id, 'full_name': message.from_user.full_name}):
+        #         await message.answer(text='Я вас зарегистрировал, можете работать.')
+        #     else:
+        #         await message.answer(text='Зарегистрировать вас у меня не получилось.')
+        # # переход в основное меню
+        # else:
+        #     await message.answer(text='Вы уже в подписке')
+
+        text_answer = await reg_users.subscribe(user_id=message.chat.id, full_name=message.from_user.full_name)
+        await message.answer(text=text_answer)
+
     except Exception as err:
         await log.log(text=f'[{str(message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}',
                       severity='error', facility=os.path.basename(__file__))
@@ -564,22 +575,24 @@ async def cmd_get_bot_users(message: Message, state: FSMContext):
 
         # из таблицы users БД
         # получаем full_name, active всех пользователей из таблицы users с заполненным tg_id
-        query = 'SELECT name, active FROM users WHERE tg_id is not NULL'
-        subs_users = ''
-        subs_count = 0
-        unsubs_users = ''
-        unsubs_count = 0
-        await db.connect()
-        rows = await db.fetch(query=query)
-        await db.disconnect()
-        for user in rows:
-            if user[1]:
-                subs_count += 1
-                subs_users += f'{subs_count}. {user[0]}\n'
-            else:
-                unsubs_count += 1
-                unsubs_users += f'{unsubs_count}. {user[0]}\n'
-        text_answer = f'Пользователи бота ✔:\n{subs_users}\nПользователи бота ❌:\n{unsubs_users}' if len(subs_users + unsubs_users) else 'У бота пока нет пользователей.'
+        # query = 'SELECT name, active FROM users WHERE tg_id is not NULL'
+        # subs_users = ''
+        # subs_count = 0
+        # unsubs_users = ''
+        # unsubs_count = 0
+        # await db.connect()
+        # rows = await db.fetch(query=query)
+        # await db.disconnect()
+        # for user in rows:
+        #     if user[1]:
+        #         subs_count += 1
+        #         subs_users += f'{subs_count}. {user[0]}\n'
+        #     else:
+        #         unsubs_count += 1
+        #         unsubs_users += f'{unsubs_count}. {user[0]}\n'
+        # text_answer = f'Пользователи бота ✔:\n{subs_users}\nПользователи бота ❌:\n{unsubs_users}' if len(subs_users + unsubs_users) else 'У бота пока нет пользователей.'
+        # await message.answer(text=text_answer)
+        text_answer = await reg_users.get_all()
         await message.answer(text=text_answer)
 
     except Exception as err:

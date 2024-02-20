@@ -21,7 +21,9 @@ from handlers import common
 from handlers import maintenance
 from handlers import user_selections
 from handlers import unknown
-from handlers.common import set_registered_users_id
+
+from users import reg_users
+# from handlers.common import set_registered_users_id
 
 from core import core_log as log
 
@@ -88,7 +90,9 @@ async def main(maintenance_mode: bool = False):
     # Время можно удобно настроить на сайте: https://crontab.guru/
     # Импортируйте aiocron и добавьте cron-задачу для отправки рассылки:
     # m h d(month) m d(week)
+
     @aiocron.crontab("0 */8 * * *")
+    # @aiocron.crontab("* * * * *")
     async def bot_is_alive():
         await send_bot_is_alive(bot=bot)
         # try:
@@ -106,7 +110,10 @@ async def main(maintenance_mode: bool = False):
             await save_products()
 
     # загружаем список зарегистрированных действующих пользователей в список
-    await set_registered_users_id()
+    # await set_registered_users_id()
+    await reg_users.set()
+    # print(reg_users.users_id)
+    # print(reg_users.admins_id)
 
     # Если не указать storage, то по умолчанию всё равно будет MemoryStorage
     dp = Dispatcher(maintenance_mode=maintenance_mode, storage=MemoryStorage())

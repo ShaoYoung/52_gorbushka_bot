@@ -5,7 +5,9 @@ import os
 from datetime import datetime
 
 from core import core_log as log
-from handlers.common import get_registered_users_id
+# from handlers.common import get_registered_users_id
+from users import reg_users
+
 from handlers.common import split_text
 
 # from core.db_pool import db
@@ -13,12 +15,12 @@ from core.db import db
 # from core.db_ssh import db
 
 
-async def get_admins_id() -> list:
-    """
-    Получить список telegram_id администраторов бота для рассылки
-    :return: list
-    """
-    return [5107502329, 414366402]
+# async def get_admins_id() -> list:
+#     """
+#     Получить список telegram_id администраторов бота для рассылки
+#     :return: list
+#     """
+#     return [5107502329, 414366402]
 
 
 async def send_bot_is_alive(bot: Bot) -> None:
@@ -28,9 +30,12 @@ async def send_bot_is_alive(bot: Bot) -> None:
     :return:
     """
     try:
-        for tg_user in await get_admins_id():
+        # for tg_user in await get_admins_id():
+        for tg_user in await reg_users.get(admins=True):
             await bot.send_message(chat_id=tg_user, text=f'Время {datetime.now().strftime("%d/%m/%Y, %H:%M:%S")}. Бот работает.')
     except Exception as err:
+        # if str(err) == 'Telegram server says - Forbidden: bot was blocked by the user':
+        #     await reg_users.deactivate(tg_user)
         await log.log(text=f'[no chat_id] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error',
                       facility=os.path.basename(__file__))
 
@@ -85,44 +90,39 @@ async def send_product_events(bot: Bot) -> bool:
             if len(value) > 1:
                 text_answer += '\n'.join(value) + '\n'
 
+        # text_answer = 'Тестируем блокировку бота'
+        # print(await reg_users.get())
+
         # если есть изменения
         if text_answer:
             # рассылка каждому подписчику
-            for tg_user in await get_registered_users_id():
-                # рассылка только админам
-                # if tg_user == 414366402 or tg_user == 5107502329:
+            # for tg_user in await get_registered_users_id():
 
-                # TODO оставить только в t_bot, т.к. остальных зарегистрированных пользователей t_bot не знает
+            for tg_user in await reg_users.get():
+            # Рассылка только админам. Оставить только в t_bot, т.к. остальных зарегистрированных пользователей t_bot может не знать
+            # for tg_user in await reg_users.get(admins=True):
+
                 # if tg_user == 5107502329:
 
-                # если текст есть и он больше 4096 символов, то его надо резать на разные сообщения
-                if len(text_answer) > 4096:
-                    for part_text in await split_text(text=text_answer):
-                        # передаём порцию текста
-                        await bot.send_message(chat_id=tg_user, text=part_text)
-                # если текст есть, но он меньше 4096 символов, то его можно передать одним сообщением
-                else:
-                    # for tg_user in await get_admins_id():
-                    await bot.send_message(chat_id=tg_user, text=text_answer)
+                try:
+                    # если текст есть и он больше 4096 символов, то его надо резать на разные сообщения
+                    if len(text_answer) > 4096:
+                        for part_text in await split_text(text=text_answer):
+                            # передаём порцию текста
+                            await bot.send_message(chat_id=tg_user, text=part_text)
+                    # если текст есть, но он меньше 4096 символов, то его можно передать одним сообщением
+                    else:
+                        # for tg_user in await get_admins_id():
+                        await bot.send_message(chat_id=tg_user, text=text_answer)
+                except Exception as err:
+                    # Если пользователь заблокировал бота, деактивируем его
+                    if str(err) == 'Telegram server says - Forbidden: bot was blocked by the user':
+                        await reg_users.deactivate(tg_user)
+                        await log.log(text=f'[no chat_id] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error',
+                                      facility=os.path.basename(__file__))
+
             return True
         return False
-
-        # interval = '4 hour'
-        # # interval = '1 minute'
-        # query = f"SELECT vendor, description, event FROM history where dt > now() - interval '{interval}'"
-        #
-        # # print(query)
-        # product_events = ''
-        # # text_answer = ''
-        # await db.connect()
-        # rows = await db.fetch(query=query)
-        # await db.disconnect()
-        # for count, row in enumerate(rows, start=1):
-        #     product_events += f'<b><u>{count}.</u></b> {row[0]}, {row[1]}, {row[2]}\n'
-        #     # text_answer += f'<b><u>{count}.</u></b> {row[0]}, {row[1]}, {row[2]}\n'
-        #
-        # text_answer = f'За прошедший(е) {interval} произошли следующие изменения:\n{product_events}' if len(product_events) else f'За прошедший(е) {interval} изменений не было'
-        #
 
     except Exception as err:
         await log.log(text=f'[no chat_id] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error',
