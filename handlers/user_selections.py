@@ -16,8 +16,8 @@ from handlers.common import split_text
 # from core import core_pg as pg
 # from core import core_asyncpg as pg
 
-# from core.db_pool import db
-from core.db import db
+from core.db_pool import db
+# from core.db import db
 # from core.db_ssh import db
 
 from core import core_log as log
@@ -73,9 +73,9 @@ async def callbacks_choosing_category(callback: CallbackQuery, callback_data: Us
         query += where + group
         # print(query)
 
-        await db.connect()
+        # await db.connect()
         rows = await db.fetch(query=query)
-        await db.disconnect()
+        # await db.disconnect()
 
         buttons = {}
         for row in rows:
@@ -164,9 +164,9 @@ async def callbacks_choosing_vendor(callback: CallbackQuery, callback_data: User
         query += where + order
         # print(query)
 
-        await db.connect()
+        # await db.connect()
         rows = await db.fetch(query=query)
-        await db.disconnect()
+        # await db.disconnect()
         if rows:
             text = f'Категория <b>"{category}"</b>\nВендор <b>"{vendor}"\n</b>'
             for row in rows:

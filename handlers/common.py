@@ -14,8 +14,8 @@ from aiogram.types import FSInputFile, URLInputFile
 # from core import core_pg as pg
 # from core import core_asyncpg as pg
 
-# from core.db_pool import db
-from core.db import db
+from core.db_pool import db
+# from core.db import db
 # from core.db_ssh import db
 
 from users import reg_users
@@ -43,7 +43,7 @@ router = Router()
 # registered_users_id = list()
 # Дата последнего обновления и курсы USD (для кэширования курсов во время работы бота, т.к. в API есть ограничения)
 exchange_rates = {
-    'last_updated_datetime': datetime.utcnow().replace(year=2023),
+    'last_updated_datetime': datetime.utcnow().replace(year=2020),
     'rates': list()
 }
 
@@ -220,9 +220,9 @@ async def main_menu(message: Message, state: FSMContext):
         group = "group by category order by category"
         query += where + group
         # print(query)
-        await db.connect()
+        # await db.connect()
         rows = await db.fetch(query=query)
-        await db.disconnect()
+        # await db.disconnect()
         # rows = pg.execute(query)
         buttons = {}
         for row in rows:
@@ -319,7 +319,7 @@ async def cmd_alllist(message: Message, state: FSMContext):
         # query Vendor
         #
         queryV = "select distinct vendor from warehouse where warehouse_id=40 and balance>0 order by vendor"
-        await db.connect()
+        # await db.connect()
         rowsV = await db.fetch(query=queryV, autodisconnect=False)
         # rowsV    = pg.execute( queryV, conn=env['db']['conn'] )
         for rowV in rowsV:
@@ -355,7 +355,7 @@ async def cmd_alllist(message: Message, state: FSMContext):
                 for rowP in rowsP:
                     text += f'{rowP[0]} - {rowP[1]}\n'
                     # text += "{0}  - {1}\n".format( rowP[0], rowP[1] )
-        await db.disconnect()
+        # await db.disconnect()
 
         #
         # Macro replace
@@ -400,7 +400,7 @@ async def cmd_about(message: Message, state: FSMContext):
         Мы рады приветствовать вас в нашем боте.
     
         Здесь вы можете ознакомиться с ассортиментом товаров и ценами.
-        По любым интересующим вопросам обращайтесь по телефону 8 936 177 0022"""
+        По любым интересующим вопросам обращайтесь по телефону 8 963 962 7770"""
 
         # в 431 - 8 963 962 7770
         # в 89 - 8 936 177 0022
@@ -670,9 +670,9 @@ async def find_in_db(message: Message, state: FSMContext):
         query += where + order
         # print(query)
 
-        await db.connect()
+        # await db.connect()
         rows = await db.fetch(query=query)
-        await db.disconnect()
+        # await db.disconnect()
         if rows:
             text = f'Результат поиска: <b>"{query_text}"</b>:\n'
             for row in rows:

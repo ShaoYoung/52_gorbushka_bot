@@ -1,5 +1,5 @@
-# from core.db_pool import db
-from core.db import db
+from core.db_pool import db
+# from core.db import db
 # from core.db_ssh import db
 
 from core import core_log as log
@@ -22,9 +22,9 @@ class Users:
             # очистка
             self.users_id.clear()
             query = 'select tg_id from users where active = TRUE'
-            await db.connect()
+            # await db.connect()
             rows = await db.fetch(query=query)
-            await db.disconnect()
+            # await db.disconnect()
             for tg_id in rows:
                 self.users_id.append(tg_id[0])
         except Exception as err:
@@ -49,9 +49,9 @@ class Users:
             self.users_id.append(user.get('id'))
             # ищем пользователя в таблице users по telegram_id
             query = f"SELECT active from users where tg_id = {user.get('id')}"
-            await db.connect()
+            # await db.connect()
             rows = await db.fetch(query=query)
-            await db.disconnect()
+            # await db.disconnect()
             # если пользователь есть, то возвращаем ему активность
             if rows:
                 query = f"UPDATE users SET active = True WHERE tg_id = {user.get('id')}"
@@ -59,9 +59,9 @@ class Users:
             else:
                 query = f"INSERT INTO users (name, tg_id, active) VALUES ('{user.get('full_name')}', {user.get('id')}, True)"
             # print(query)
-            await db.connect()
+            # await db.connect()
             await db.execute(query=query)
-            await db.disconnect()
+            # await db.disconnect()
             return True
 
         except Exception as err:
@@ -89,9 +89,9 @@ class Users:
                 self.users_id.remove(user_id)
                 # делаем пользователя неактивным в таблице users БД
                 query = f"UPDATE users SET active = False WHERE tg_id = {user_id}"
-                await db.connect()
+                # await db.connect()
                 await db.execute(query=query)
-                await db.disconnect()
+                # await db.disconnect()
                 return 'Вы успешно отписаны от бота'
             else:
                 return 'В списке подписчиков вас нет'
@@ -132,9 +132,9 @@ class Users:
             subs_count = 0
             unsubs_users = ''
             unsubs_count = 0
-            await db.connect()
+            # await db.connect()
             rows = await db.fetch(query=query)
-            await db.disconnect()
+            # await db.disconnect()
             for user in rows:
                 if user[1]:
                     subs_count += 1

@@ -4,8 +4,8 @@ import inspect
 import os
 
 
-# from core.db_pool import db
-from core.db import db
+from core.db_pool import db
+# from core.db import db
 # from core.db_ssh import db
 
 from core import core_log as log
@@ -34,7 +34,7 @@ async def save_matrix_to_excel(matrix: list[list]) -> bool:
     worksheet = workbook['Список товаров']
     # Первая строка
     # worksheet.append(['product_id', 'category', 'vendor', 'description', 'price'])
-    worksheet.append(['product_id', 'description', 'price'])
+    worksheet.append(['xmlid', 'description', 'price'])
 
     # ширина столбцов листа excel
     worksheet.column_dimensions['A'].width = 13
@@ -100,10 +100,10 @@ async def save_products() -> None:
     """
     try:
         # query = 'SELECT product_id, category, vendor, description, price from warehouse WHERE balance > 0 AND price > 0 ORDER BY category, vendor, description'
-        query = 'SELECT product_id, description, price from warehouse WHERE balance > 0 AND price > 0 ORDER BY description'
-        await db.connect()
+        query = 'SELECT xmlid, description, price from warehouse WHERE balance > 0 AND price > 0 ORDER BY description'
+        # await db.connect()
         rows = await db.fetch(query=query)
-        await db.disconnect()
+        # await db.disconnect()
         # print('Файл готов к записи')
         rows = list(map(list, rows))
         await save_matrix_to_excel(rows)

@@ -10,8 +10,8 @@ from users import reg_users
 
 from handlers.common import split_text
 
-# from core.db_pool import db
-from core.db import db
+from core.db_pool import db
+# from core.db import db
 # from core.db_ssh import db
 
 
@@ -59,9 +59,9 @@ async def send_product_events(bot: Bot) -> bool:
                    AND w.description <> '190'
                    ORDER BY h."event" """
         # print(query)
-        await db.connect()
+        # await db.connect()
         rows = await db.fetch(query=query)
-        await db.disconnect()
+        # await db.disconnect()
 
         text_answer = ''
         # event
@@ -118,7 +118,7 @@ async def send_product_events(bot: Bot) -> bool:
                     # Если пользователь заблокировал бота, деактивируем его
                     if str(err) == 'Telegram server says - Forbidden: bot was blocked by the user':
                         await reg_users.deactivate(tg_user)
-                        await log.log(text=f'[no chat_id] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error',
+                        await log.log(text=f'{str(tg_user)} {inspect.currentframe().f_code.co_name} {str(err)}', severity='error',
                                       facility=os.path.basename(__file__))
 
             return True

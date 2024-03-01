@@ -32,6 +32,7 @@ from sender import send_product_events
 
 from utils import save_products
 
+from core.db_pool import db
 # from core.db import db
 # from core.db_ssh import db
 
@@ -108,6 +109,11 @@ async def main(maintenance_mode: bool = False):
     async def product_events():
         if await send_product_events(bot=bot):
             await save_products()
+
+    # Закрытие pool каждые 5 минут. А надо ли?
+    # @aiocron.crontab("*/5 * * * *")
+    # async def db_disconnect():
+    #     await db.disconnect()
 
     # загружаем список зарегистрированных действующих пользователей в список
     # await set_registered_users_id()
