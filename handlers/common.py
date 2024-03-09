@@ -593,7 +593,14 @@ async def cmd_get_bot_users(message: Message, state: FSMContext):
         # text_answer = f'Пользователи бота ✔:\n{subs_users}\nПользователи бота ❌:\n{unsubs_users}' if len(subs_users + unsubs_users) else 'У бота пока нет пользователей.'
         # await message.answer(text=text_answer)
         text_answer = await reg_users.get_all()
-        await message.answer(text=text_answer)
+
+        # если текст есть и он больше 4096 символов, то его надо резать на разные сообщения
+        if len(text_answer) > 4096:
+            for part_text in await split_text(text=text_answer):
+                await message.answer(text=part_text)
+        # если текст есть, но он меньше 4096 символов, то его можно передать одним сообщением
+        else:
+            await message.answer(text=text_answer)
 
     except Exception as err:
         await log.log(text=f'[{str(message.chat.id)}] {inspect.currentframe().f_code.co_name} {str(err)}', severity='error', facility=os.path.basename(__file__))
