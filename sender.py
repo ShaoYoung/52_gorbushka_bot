@@ -1,6 +1,7 @@
 from aiogram import Bot
 import inspect
 import os
+from time import sleep
 
 from datetime import datetime
 
@@ -98,11 +99,20 @@ async def send_product_events(bot: Bot) -> bool:
             # рассылка каждому подписчику
             # for tg_user in await get_registered_users_id():
 
+            count_subscribers = 0
+
             for tg_user in await reg_users.get():
             # Рассылка только админам. Оставить только в t_bot, т.к. остальных зарегистрированных пользователей t_bot может не знать
             # for tg_user in await reg_users.get(admins=True):
 
                 # if tg_user == 5107502329:
+
+                count_subscribers += 1
+                # Отправка по 100 пользователей
+                if count_subscribers == 100:
+                    # Пауза 3 секунды
+                    sleep(3)
+                    count_subscribers = 0
 
                 try:
                     # если текст есть и он больше 4096 символов, то его надо резать на разные сообщения
